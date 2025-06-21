@@ -2,6 +2,7 @@ import Event from "../models/eventModel";
 import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../controllers/authController";
 import { IEvent } from "../utils/types";
+import { AuthError } from "../utils/errors";
 
 function convertMMDDYYYYToDate(dateString: string): Date {
     // Convert MM-DD-YYYY to YYYY-MM-DD format
@@ -83,4 +84,59 @@ const getAllEvents = async (req: AuthenticatedRequest, res: Response): Promise<v
     }
 }
 
-export { createEvent, getAllEvents }
+const deleteEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        // Check if user is authorized to delete an event
+        if (req?.user?.role !== "owner") {
+            res.status(403).json({
+                status: false,
+                message: "You are not authorized to delete an event"
+            });
+            return;
+        }
+
+        const { id } = req.params;
+
+        // Validation
+        if (!id) {
+            res.status(400).json({
+                status: false,
+                message: 'Event ID is required.'
+            });
+            return;
+        }
+
+        // Check if event exists
+        const event = await Event.findById(id);
+        if (!event) {
+            res.status(404).json({
+                status: false,
+                message: 'Event not found.'
+            });
+            return;
+        }
+
+        // Delete event
+        await Event.findByIdAndDelete(id);
+
+        res.status(200).json({
+            status: true,
+            message: "Event deleted successfully.",
+            deletedEvent: {
+                id: event._id,
+                sportsCategory: event.sportsCategory,
+                venue: event.venue,
+                date: event.date
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            message: "Could not delete event. Please try again.",
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
+export { createEvent, getAllEvents, deleteEvent }

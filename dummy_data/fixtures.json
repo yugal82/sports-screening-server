@@ -1,0 +1,81 @@
+{
+  "url": "https://v3.football.api-sports.io/fixtures?date=2025-06-18",
+  "message": "URL is not part of response, I have mentioned it in the response to keep the URL and its response in the same file",
+  "get": "fixtures",
+  "parameters": { "date": "2025-06-18" },
+  "errors": [],
+  "results": 248,
+  "paging": { "current": 1, "total": 1 },
+  "response": [
+    {
+      "fixture": {
+        "id": 1354659,
+        "referee": null,
+        "timezone": "UTC",
+        "date": "2025-06-18T00:00:00+00:00",
+        "timestamp": 1750204800,
+        "periods": {
+          "first": 1750204800,
+          "second": 1750208400
+        },
+        "venue": {
+          "id": 2683,
+          "name": "Estadio Olímpico de Ibarra",
+          "city": "Ibarra"
+        },
+        "status": {
+          "long": "Match Finished",
+          "short": "FT",
+          "elapsed": 90,
+          "extra": 4
+        }
+      },
+      "league": {
+        "id": 243,
+        "name": "Liga Pro Serie B",
+        "country": "Ecuador",
+        "logo": "https://media.api-sports.io/football/leagues/243.png",
+        "flag": "https://media.api-sports.io/flags/ec.svg",
+        "season": 2025,
+        "round": "Regular Season - 14",
+        "standings": true
+      },
+      "teams": {
+        "home": {
+          "id": 23310,
+          "name": "San Antonio",
+          "logo": "https://media.api-sports.io/football/teams/23310.png",
+          "winner": true
+        },
+        "away": {
+          "id": 10112,
+          "name": "Chacaritas",
+          "logo": "https://media.api-sports.io/football/teams/10112.png",
+          "winner": false
+        }
+      },
+      "goals": {
+        "home": 2,
+        "away": 0
+      },
+      "score": {
+        "halftime": {
+          "home": 1,
+          "away": 0
+        },
+        "fulltime": {
+          "home": 2,
+          "away": 0
+        },
+        "extratime": {
+          "home": null,
+          "away": null
+        },
+        "penalty": {
+          "home": null,
+          "away": null
+        }
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import { createUserResponse } from "../utils/responseHelpers";
 import { IUser } from "../utils/types";
 import { AuthenticatedRequest } from "../controllers/authController";
 import jwt from "jsonwebtoken";
+import userCacheService from "../services/cacheService";
 
 // Types
 interface JWTPayload {
@@ -48,17 +49,50 @@ const getMe = async (req: Request, res: Response): Promise<void> => {
         // Verify token
         const decoded = verifyToken(token);
 
-        // Check if user still exists
-        const user = await findUserById(decoded.id);
-        const userResponse = createUserResponse(user);
+        // Try to get user data from cache first
+        let userData = await userCacheService.getCachedUserData(decoded.id);
+
+        if (!userData) {
+            // Cache miss - fetch from database
+            console.log('🔄 Cache miss - fetching from database');
+            const user = await findUserById(decoded.id);
+            userData = user.toObject() as unknown as IUser;
+
+            // Cache the user data with JWT expiration
+            await userCacheService.cacheUserData(decoded.id, userData, decoded.exp);
+        }
 
         res.status(200).json({
             status: true,
             message: "User Authenticated.",
-            user: userResponse
+            user: userData
         });
 
     } catch (error) {
+        if (error instanceof jwt.JsonWebTokenError) {
+            res.status(401).json({
+                status: false,
+                message: "Invalid token. Please login again."
+            });
+            return;
+        }
+
+        if (error instanceof jwt.TokenExpiredError) {
+            res.status(401).json({
+                status: false,
+                message: "Token expired. Please login again."
+            });
+            return;
+        }
+
+        if (error instanceof AuthError) {
+            res.status(401).json({
+                status: false,
+                message: error.message
+            });
+            return;
+        }
+
         res.status(500).json({
             status: false,
             message: "Could not retrieve user data. Please try again.",
@@ -116,6 +150,13 @@ const getUserById = async (req: Request, res: Response): Promise<void> => {
         });
 
     } catch (error) {
+        if (error instanceof AuthError) {
+            res.status(404).json({
+                status: false,
+                message: error.message
+            });
+            return;
+        }
         res.status(500).json({
             status: false,
             message: "Could not fetch user details. Please try again.",
@@ -140,9 +181,12 @@ const deleteUser = async (req: Request, res: Response): Promise<void> => {
         // Delete user
         await User.findByIdAndDelete(id);
 
+        // Invalidate user cache
+        await userCacheService.invalidateUserCache(id);
+
         res.status(200).json({
             status: true,
-            message: "User deleted successfully.",
+            message: "User deleted successfully."
         });
 
     } catch (error) {

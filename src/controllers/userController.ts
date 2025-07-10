@@ -33,6 +33,82 @@ const findUserById = async (id: string) => {
 };
 
 // Controller Methods
+const getAllUsers = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        // Check if user is authorized (admin only)
+        if (req?.user?.role !== "admin") {
+            res.status(403).json({
+                status: false,
+                message: "You are not authorized to view all users."
+            });
+            return;
+        }
+
+        // Get query parameters for pagination and filtering
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const role = req.query.role as string;
+        const search = req.query.search as string;
+
+        // Build query
+        let query: any = {};
+
+        if (role) {
+            query.role = role;
+        }
+
+        if (search) {
+            query.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Calculate skip value for pagination
+        const skip = (page - 1) * limit;
+
+        // Get users with pagination
+        const users = await User.find(query)
+            .select('-password')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Get total count for pagination
+        const totalUsers = await User.countDocuments(query);
+        const totalPages = Math.ceil(totalUsers / limit);
+
+        // Transform users to response format
+        const userResponses = users.map(user => {
+            const userObj = user.toObject();
+            return createUserResponse(user);
+        });
+
+        res.status(200).json({
+            status: true,
+            message: "All users fetched successfully.",
+            data: {
+                users: userResponses,
+                pagination: {
+                    currentPage: page,
+                    totalPages,
+                    totalUsers,
+                    limit,
+                    hasNextPage: page < totalPages,
+                    hasPrevPage: page > 1
+                }
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            message: "Could not fetch users. Please try again.",
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
 const getMe = async (req: Request, res: Response): Promise<void> => {
     try {
         // Get token from cookie
@@ -198,4 +274,4 @@ const deleteUser = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-export { getMe, getCurrentUser, getUserById, deleteUser };
+export { getAllUsers, getMe, getCurrentUser, getUserById, deleteUser };

@@ -1,6 +1,6 @@
 import express from 'express';
 import { register, login, logout, checkAuth, AuthenticatedRequest } from "../controllers/authController";
-import { getMe, getCurrentUser, getUserById, deleteUser } from "../controllers/userController";
+import { getAllUsers, getMe, getCurrentUser, getUserById, deleteUser } from "../controllers/userController";
 
 const router = express.Router();
 
@@ -12,6 +12,7 @@ router.get("/logout", logout);
 router.get("/me", getMe);
 
 // Protected routes - require authentication
+router.get("/", checkAuth, getAllUsers);
 router.get("/profile", checkAuth, getCurrentUser);
 router.get("/:id", checkAuth, getUserById);
 router.delete("/:id", checkAuth, deleteUser);

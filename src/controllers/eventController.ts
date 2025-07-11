@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { AuthenticatedRequest } from "../controllers/authController";
 import { IEvent } from "../utils/types";
 import { AuthError } from "../utils/errors";
+import { processImageFile } from "../utils/fileUtils";
 
 function convertMMDDYYYYToDate(dateString: string): Date {
     // Convert MM-DD-YYYY to YYYY-MM-DD format
@@ -11,6 +12,15 @@ function convertMMDDYYYYToDate(dateString: string): Date {
 
     return new Date(isoDateString);
 }
+
+// Event Service
+const findEventById = async (id: string) => {
+    const event = await Event.findById(id);
+    if (!event) {
+        throw new AuthError('Event not found.');
+    }
+    return event;
+};
 
 const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -25,7 +35,31 @@ const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
 
         const { sportsCategory, venue, price, maxOccupancy, date, time, timeZone } = req.body;
         const convertedDate = convertMMDDYYYYToDate(date);
-        const event: IEvent = { sportsCategory, venue, price, maxOccupancy, date: convertedDate, time, timeZone }
+
+        const event: IEvent = {
+            sportsCategory,
+            venue,
+            price,
+            maxOccupancy,
+            date: convertedDate,
+            time,
+            timeZone
+        };
+
+        // Handle image file if uploaded
+        if (req.file) {
+            try {
+                const base64Image = processImageFile(req.file);
+                event.image = base64Image;
+            } catch (error) {
+                res.status(400).json({
+                    status: false,
+                    message: error instanceof Error ? error.message : "Invalid image file"
+                });
+                return;
+            }
+        }
+
         if (sportsCategory === "football") {
             event.football = {
                 homeTeam: req.body.football.homeTeam,
@@ -107,14 +141,7 @@ const deleteEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
         }
 
         // Check if event exists
-        const event = await Event.findById(id);
-        if (!event) {
-            res.status(404).json({
-                status: false,
-                message: 'Event not found.'
-            });
-            return;
-        }
+        const event = await findEventById(id);
 
         // Delete event
         await Event.findByIdAndDelete(id);
@@ -131,6 +158,13 @@ const deleteEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
         });
 
     } catch (error) {
+        if (error instanceof AuthError) {
+            res.status(404).json({
+                status: false,
+                message: error.message
+            });
+            return;
+        }
         res.status(500).json({
             status: false,
             message: "Could not delete event. Please try again.",

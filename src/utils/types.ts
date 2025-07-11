@@ -37,6 +37,7 @@ interface IEvent {
     date?: Date;
     time?: string;
     timeZone?: string;
+    image?: string; // Base64 encoded image
 }
 
 export { IUser, IEvent };

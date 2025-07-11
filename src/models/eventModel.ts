@@ -24,6 +24,7 @@ const eventSchema = new Schema({
     date: { type: Date, required: [true, "Date is required for the event"] },
     time: { type: String, required: [true, "Time is required for the event"] },
     timeZone: { type: String, required: [true, "Time zone is required for the event"] },
+    image: { type: String }, // Base64 encoded image
     createdAt: { type: Date, default: Date.now, select: false },
     updatedAt: { type: Date, default: Date.now, select: false },
 })

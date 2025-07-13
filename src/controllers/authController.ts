@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import User from "../models/userModel";
+import Booking from "../models/bookingModel";
+import Event from "../models/eventModel";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { AuthError } from "../utils/errors";
@@ -11,17 +13,6 @@ const SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
 const JWT_EXPIRES_IN = Number(process.env.JWT_COOKIE_EXPIRES_IN) * 24 * 60 * 60 * 1000;
 
 // Types
-// interface LoginRequest {
-//     email: string;
-//     password: string;
-// }
-
-// interface RegisterRequest extends LoginRequest {
-//     name: string;
-//     favorites?: string[];
-// }
-
-
 interface AuthenticatedRequest extends Request {
     user?: IUser | null
 }
@@ -57,6 +48,23 @@ const validatePassword = async (password: string, hashedPassword: string) => {
     if (!isCorrect) {
         throw new AuthError('Incorrect password.');
     }
+};
+
+// Booking Service
+const getUpcomingBookings = async (userId: string) => {
+    const currentDate = new Date();
+
+    // Get upcoming bookings with populated event details
+    const bookings = await Booking.find({ userId })
+        .populate({
+            path: 'eventId',
+            select: 'sportsCategory venue date time price image',
+            match: { date: { $gte: currentDate } } // Only future events
+        })
+        .sort({ createdAt: -1 });
+
+    // Filter out bookings with null events (past events)
+    return bookings.filter(booking => booking.eventId !== null);
 };
 
 // Token Service
@@ -147,9 +155,18 @@ const login = async (req: Request, res: Response): Promise<void> => {
         const user = await findUserByEmail(email);
         await validatePassword(password, user.password);
 
-        // Create response
+        // Get upcoming bookings for the user
+        const upcomingBookings = await getUpcomingBookings(user._id.toString());
+
+        // Create response with bookings
         const token = createToken(user._id.toString(), user.role);
         const userResponse = createUserResponse(user);
+
+        // Add bookings to user response
+        const userWithBookings = {
+            ...userResponse,
+            bookings: upcomingBookings
+        };
 
         res.status(200)
             .cookie("jwt", token, {
@@ -160,7 +177,7 @@ const login = async (req: Request, res: Response): Promise<void> => {
             .json({
                 status: true,
                 message: "User logged in successfully.",
-                user: userResponse
+                user: userWithBookings
             });
 
     } catch (error) {

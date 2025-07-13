@@ -6,7 +6,7 @@ import { upload } from "../utils/fileUtils";
 const router = Router();
 
 router.post("/create", checkAuth, upload.single('image'), createEvent);
-router.get("/", checkAuth, getAllEvents);
+router.get("/", getAllEvents);
 router.delete("/:id", checkAuth, deleteEvent);
 
 export default router;

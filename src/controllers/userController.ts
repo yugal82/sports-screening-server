@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/userModel";
+import Booking from "../models/bookingModel";
 import { AuthError } from "../utils/errors";
 import { createUserResponse } from "../utils/responseHelpers";
 import { IUser } from "../utils/types";
@@ -30,6 +31,23 @@ const findUserById = async (id: string) => {
         throw new AuthError('User not found.');
     }
     return user;
+};
+
+// Booking Service
+const getUpcomingBookings = async (userId: string) => {
+    const currentDate = new Date();
+
+    // Get upcoming bookings with populated event details
+    const bookings = await Booking.find({ userId })
+        .populate({
+            path: 'eventId',
+            select: 'sportsCategory venue date time price image',
+            match: { date: { $gte: currentDate } } // Only future events
+        })
+        .sort({ createdAt: -1 });
+
+    // Filter out bookings with null events (past events)
+    return bookings.filter(booking => booking.eventId !== null);
 };
 
 // Controller Methods
@@ -138,10 +156,19 @@ const getMe = async (req: Request, res: Response): Promise<void> => {
             await userCacheService.cacheUserData(decoded.id, userData, decoded.exp);
         }
 
+        // Get upcoming bookings for the user
+        const upcomingBookings = await getUpcomingBookings(decoded.id);
+
+        // Add bookings to user data
+        const userWithBookings = {
+            ...userData,
+            bookings: upcomingBookings
+        };
+
         res.status(200).json({
             status: true,
             message: "User Authenticated.",
-            user: userData
+            user: userWithBookings
         });
 
     } catch (error) {
@@ -187,10 +214,19 @@ const getCurrentUser = async (req: AuthenticatedRequest, res: Response): Promise
             return;
         }
 
+        // Get upcoming bookings for the user
+        const upcomingBookings = await getUpcomingBookings(req.user._id?.toString() || '');
+
+        // Add bookings to user data
+        const userWithBookings = {
+            ...req.user,
+            bookings: upcomingBookings
+        };
+
         res.status(200).json({
             status: true,
             message: "Current user profile fetched successfully.",
-            user: req.user
+            user: userWithBookings
         });
 
     } catch (error) {

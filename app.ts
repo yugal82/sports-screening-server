@@ -16,10 +16,12 @@ app.use(cookieParser());
 // import all routes here
 import userRoutes from "./src/routes/userRoutes";
 import eventRoutes from "./src/routes/eventRoutes";
+import bookingRoutes from "./src/routes/bookingRoutes";
 
 
 // define all the routes here
 app.use("/api/users", userRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 module.exports = app;

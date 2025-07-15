@@ -21,6 +21,7 @@ const eventSchema = new Schema({
     venue: { type: String, required: [true, "Venue is required for the event"] },
     price: { type: Number, required: [true, "Price is required for the event"] },
     maxOccupancy: { type: Number, required: [true, "Max occupancy is required for the event"] },
+    availableSeats: { type: Number, required: [true, "Available seats is required for the event"] },
     date: { type: Date, required: [true, "Date is required for the event"] },
     time: { type: String, required: [true, "Time is required for the event"] },
     timeZone: { type: String, required: [true, "Time zone is required for the event"] },

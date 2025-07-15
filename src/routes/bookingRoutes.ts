@@ -1,6 +1,6 @@
 import express from 'express';
 import { checkAuth } from "../controllers/authController";
-import { getAllBookings, getBooking, createBooking } from "../controllers/bookingController";
+import { getAllBookings, getBooking, createBooking, cancelBooking } from "../controllers/bookingController";
 
 const router = express.Router();
 
@@ -10,6 +10,7 @@ router.use(checkAuth);
 // Booking routes
 router.get("/", getAllBookings);
 router.get("/:id", getBooking);
-router.post("/", createBooking);
+router.post("/create", createBooking);
+router.delete("/:id", cancelBooking);
 
 export default router; 

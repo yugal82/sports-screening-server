@@ -41,6 +41,7 @@ const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
             venue,
             price,
             maxOccupancy,
+            availableSeats: maxOccupancy,
             date: convertedDate,
             time,
             timeZone

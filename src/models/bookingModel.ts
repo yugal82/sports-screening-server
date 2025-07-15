@@ -7,8 +7,8 @@ const bookingSchema = new Schema({
     quantity: { type: Number },
     price: { type: Number },
     // status: { type: String, enum: ['pending', 'confirmed', 'cancelled'] },
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+    createdAt: { type: Date, default: Date.now, select: false },
+    updatedAt: { type: Date, default: Date.now, select: false },
 });
 
 const Booking = model('Booking', bookingSchema);

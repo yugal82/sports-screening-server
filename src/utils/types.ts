@@ -34,6 +34,7 @@ interface IEvent {
     venue?: string;
     price?: number;
     maxOccupancy?: number;
+    availableSeats?: number;
     date?: Date;
     time?: string;
     timeZone?: string;

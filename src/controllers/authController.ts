@@ -59,7 +59,7 @@ const getUpcomingBookings = async (userId: string) => {
         .populate({
             path: 'eventId',
             select: 'sportsCategory venue date time price image',
-            match: { date: { $gte: currentDate } } // Only future events
+            // match: { date: { $gte: currentDate } } // Only future events
         })
         .sort({ createdAt: -1 });
 

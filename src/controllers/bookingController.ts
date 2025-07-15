@@ -20,7 +20,7 @@ interface BookingParams {
 const findBookingById = async (id: string) => {
     const booking = await Booking.findById(id)
         .populate('userId', 'name email')
-        .populate('eventId', 'sportsCategory venue date time price');
+        .populate('eventId', 'sportsCategory venue date time price availableSeats');
 
     if (!booking) {
         throw new AuthError('Booking not found.');
@@ -41,6 +41,26 @@ const generateQRCodeData = (bookingId: string, userId: string, eventId: string):
     return `${bookingId}-${userId}-${eventId}-${Date.now()}`;
 };
 
+// Update event available seats
+const updateEventSeats = async (eventId: string, quantity: number, operation: 'decrease' | 'increase') => {
+    const event = await Event.findById(eventId);
+    if (!event) {
+        throw new AuthError('Event not found.');
+    }
+
+    if (operation === 'decrease') {
+        if (event.availableSeats < quantity) {
+            throw new AuthError(`Not enough seats available. Only ${event.availableSeats} seats remaining.`);
+        }
+        event.availableSeats -= quantity;
+    } else {
+        event.availableSeats += quantity;
+    }
+
+    await event.save();
+    return event;
+};
+
 // Controller Methods
 const getAllBookings = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -55,7 +75,7 @@ const getAllBookings = async (req: AuthenticatedRequest, res: Response): Promise
         // Get all bookings for the authenticated user
         const bookings = await Booking.find({ userId: req.user._id })
             .populate('userId', 'name email')
-            .populate('eventId', 'sportsCategory venue date time price')
+            .populate('eventId', 'sportsCategory venue date time price availableSeats')
             .sort({ createdAt: -1 });
 
         res.status(200).json({
@@ -136,22 +156,18 @@ const createBooking = async (req: AuthenticatedRequest, res: Response): Promise<
         if (quantity <= 0 || price <= 0) {
             res.status(400).json({
                 status: false,
-                message: 'Quantity and price must be greater than 0.'
+                message: 'Quantity or price must be greater than 0.'
             });
             return;
         }
 
-        // Check if event exists
+        // Check if event exists and has enough seats
         const event = await findEventById(eventId);
 
-        // Check if event has available capacity
-        const existingBookings = await Booking.find({ eventId });
-        const totalBooked = existingBookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
-
-        if (totalBooked + quantity > event.maxOccupancy) {
+        if (event.availableSeats < quantity) {
             res.status(400).json({
                 status: false,
-                message: `Not enough seats available. Only ${event.maxOccupancy - totalBooked} seats remaining.`
+                message: `Not enough seats available. Only ${event.availableSeats} seats remaining.`
             });
             return;
         }
@@ -169,10 +185,13 @@ const createBooking = async (req: AuthenticatedRequest, res: Response): Promise<
         newBooking.qrCodeData = generateQRCodeData(newBooking._id.toString(), req.user._id?.toString() || '', eventId);
         await newBooking.save();
 
+        // Reduce available seats for the event
+        await updateEventSeats(eventId, quantity, 'decrease');
+
         // Populate the booking with user and event details
         const populatedBooking = await Booking.findById(newBooking._id)
             .populate('userId', 'name email')
-            .populate('eventId', 'sportsCategory venue date time price');
+            .populate('eventId', 'sportsCategory venue date time price availableSeats');
 
         res.status(201).json({
             status: true,
@@ -189,4 +208,88 @@ const createBooking = async (req: AuthenticatedRequest, res: Response): Promise<
     }
 };
 
-export { getAllBookings, getBooking, createBooking };
+const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({
+                status: false,
+                message: 'User not authenticated.'
+            });
+            return;
+        }
+
+        const { id } = req.params;
+
+        // Validation
+        if (!id) {
+            res.status(400).json({
+                status: false,
+                message: 'Booking ID is required.'
+            });
+            return;
+        }
+
+        // Find booking and check ownership
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            res.status(404).json({
+                status: false,
+                message: 'Booking not found.'
+            });
+            return;
+        }
+
+        // Check if user owns this booking
+        if (booking.userId.toString() !== req.user._id?.toString()) {
+            res.status(403).json({
+                status: false,
+                message: 'You are not authorized to cancel this booking.'
+            });
+            return;
+        }
+
+        // Check if event is in the future
+        const event = await Event.findById(booking.eventId);
+        if (!event) {
+            res.status(404).json({
+                status: false,
+                message: 'Event not found.'
+            });
+            return;
+        }
+
+        const currentDate = new Date();
+        if (event.date <= currentDate) {
+            res.status(400).json({
+                status: false,
+                message: 'Cannot cancel booking for past events.'
+            });
+            return;
+        }
+
+        // Increase available seats for the event
+        await updateEventSeats(booking.eventId.toString(), booking.quantity || 0, 'increase');
+
+        // Delete the booking
+        await Booking.findByIdAndDelete(id);
+
+        res.status(200).json({
+            status: true,
+            message: "Booking cancelled successfully.",
+            cancelledBooking: {
+                id: booking._id,
+                quantity: booking.quantity,
+                eventId: booking.eventId
+            }
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            message: "Could not cancel booking. Please try again.",
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+};
+
+export { getAllBookings, getBooking, createBooking, cancelBooking };

@@ -1,11 +1,12 @@
 import express from 'express';
 import { register, login, logout, checkAuth, AuthenticatedRequest } from "../controllers/authController";
 import { getAllUsers, getMe, getCurrentUser, getUserById, deleteUser } from "../controllers/userController";
+import { authRateLimiter } from '../middleware/rateLimitMiddleware';
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", authRateLimiter, register);
+router.post("/login", authRateLimiter, login);
 router.get("/logout", logout);
 
 // Public route - checks JWT token from cookies

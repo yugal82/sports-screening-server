@@ -94,8 +94,16 @@ const getAllBookings = async (req: AuthenticatedRequest, res: Response): Promise
     }
 };
 
-const getBooking = async (req: Request, res: Response): Promise<void> => {
+const getBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
+        if (!req.user) {
+            res.status(401).json({
+                status: false,
+                message: 'User not authenticated.'
+            });
+            return;
+        }
+
         const { id } = req.params;
 
         // Validation
@@ -109,6 +117,15 @@ const getBooking = async (req: Request, res: Response): Promise<void> => {
 
         // Find booking
         const booking = await findBookingById(id);
+
+        // Check if user owns this booking or is admin
+        if (booking.userId.toString() !== req.user._id?.toString() && req.user.role !== 'admin') {
+            res.status(403).json({
+                status: false,
+                message: 'You are not authorized to view this booking.'
+            });
+            return;
+        }
 
         res.status(200).json({
             status: true,

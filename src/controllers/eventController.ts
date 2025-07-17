@@ -124,20 +124,55 @@ const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
 
 const getAllEvents = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-        const { sportsCategory } = req?.query;
-        let query = {};
-        if (sportsCategory) query = { sportsCategory: sportsCategory }
+        // Parse query params
+        const { minPrice, maxPrice, date, startDate, endDate, sortBy, sortOrder } = req.query;
+        let query: any = {};
 
-        // - can later add query for date, time, timeZone, etc.
-        // - also check if the event is yet to happen or not. If the date is in the past, then it should not be shown.
+        // Sports category filter (keep existing)
+        // if (sportsCategory) query.sportsCategory = sportsCategory;
 
-        const events = await Event.find(query).select("-__v -createdAt -updatedAt");
+        // Price range filter
+        if (minPrice || maxPrice) {
+            query.price = {};
+            if (minPrice) query.price.$gte = Number(minPrice);
+            if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+
+        // Date range filter
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) query.date.$gte = new Date(startDate as string);
+            if (endDate) query.date.$lte = new Date(endDate as string);
+        }
+
+        // Specific date filter (overrides range if present)
+        if (date) {
+            // Match events on the same day (ignoring time)
+            const day = new Date(date as string);
+            const nextDay = new Date(day);
+            nextDay.setDate(day.getDate() + 1);
+            query.date = { $gte: day, $lt: nextDay };
+        }
+
+        // Sorting
+        let sort: any = {};
+        if (sortBy === 'price' || sortBy === 'date') {
+            sort[sortBy as string] = sortOrder === 'desc' ? -1 : 1;
+        } else {
+            sort.date = 1; // Default sort by date ascending
+        }
+
+        // Query the database
+        const events = await Event.find(query)
+            .select("-__v -createdAt -updatedAt")
+            .sort(sort);
+
         res.status(200).json({
             status: true,
             message: "All events fetched successfully",
             length: events?.length,
             events: events
-        })
+        });
     } catch (error) {
         res.status(500).json({
             status: false,

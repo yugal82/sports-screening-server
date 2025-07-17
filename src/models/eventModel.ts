@@ -19,6 +19,17 @@ const eventSchema = new Schema({
         circuit: { type: String },
     },
     venue: { type: String, required: [true, "Venue is required for the event"] },
+    coordinates: {
+        type: [Number], // [longitude, latitude]
+        validate: {
+            validator: function (v: number[]) {
+                return v.length === 2 &&
+                    v[0] >= -180 && v[0] <= 180 && // longitude range
+                    v[1] >= -90 && v[1] <= 90; // latitude range
+            },
+            message: 'Coordinates must be an array of two numbers: [longitude, latitude]'
+        }
+    },
     price: { type: Number, required: [true, "Price is required for the event"] },
     maxOccupancy: { type: Number, required: [true, "Max occupancy is required for the event"] },
     availableSeats: { type: Number, required: [true, "Available seats is required for the event"] },

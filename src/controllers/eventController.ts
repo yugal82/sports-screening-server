@@ -22,6 +22,22 @@ const findEventById = async (id: string) => {
     return event;
 };
 
+
+const getLongLat = async (address: string) => {
+    try {
+        const encoded = encodeURIComponent(address);
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encoded}.json` +
+            `?access_token=${process.env.MAPBOX_API_KEY}&limit=1`;
+        const response = await fetch(url);
+        const data: any = await response.json();
+        const feature = data.features[0];
+        const [lng, lat] = feature.center;
+        return { lng, lat };
+    } catch (error) {
+        console.log(error);
+    }
+}
+
 const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         // first check if the user is authorized to create an event
@@ -46,6 +62,19 @@ const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
             time,
             timeZone
         };
+
+        // Get coordinates from venue address
+        if (venue) {
+            try {
+                const coords = await getLongLat(venue);
+                if (coords && typeof coords.lng === 'number' && typeof coords.lat === 'number') {
+                    event.coordinates = [coords.lng, coords.lat];
+                }
+            } catch (geoError) {
+                // If geocoding fails, continue without coordinates
+                console.log('Geocoding failed:', geoError);
+            }
+        }
 
         // Handle image file if uploaded
         if (req.file) {
@@ -79,7 +108,6 @@ const createEvent = async (req: AuthenticatedRequest, res: Response): Promise<vo
         }
 
         const newEvent = await Event.create(event);
-        console.log("New event: \n", newEvent);
         res.status(200).json({
             status: true,
             message: "Event created successfully",

@@ -32,6 +32,7 @@ interface IEvent {
         circuit: string;
     };
     venue?: string;
+    coordinates?: [number, number]; // [longitude, latitude]
     price?: number;
     maxOccupancy?: number;
     availableSeats?: number;

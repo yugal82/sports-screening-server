@@ -60,8 +60,7 @@ export interface PaymentIntentResponse {
 }
 
 export interface RefundRequest {
-    paymentIntentId: string;
-    amount?: number;
+    bookingId: string;
     reason?: 'requested_by_customer' | 'duplicate' | 'fraudulent';
 }
 

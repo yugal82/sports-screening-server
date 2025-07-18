@@ -320,7 +320,7 @@ const updateBooking = async (req: AuthenticatedRequest, res: Response): Promise<
         }
 
         const { id } = req.params;
-        const { status, paymentInfo } = req.body;
+        const { status, paymentStatus } = req.body;
 
         const booking = await Booking.findById(id);
         if (!booking) {
@@ -340,10 +340,10 @@ const updateBooking = async (req: AuthenticatedRequest, res: Response): Promise<
         }
 
         if (status) booking.status = status;
-
-        // if (paymentInfo) {
-        //     booking.paymentInfo = paymentInfo;
-        // }
+        if (paymentStatus) {
+            if (!booking.paymentInfo) booking.paymentInfo = {};
+            booking.paymentInfo.paymentStatus = paymentStatus;
+        }
 
         await booking.save();
 

@@ -7,7 +7,16 @@ const bookingSchema = new Schema({
     quantity: { type: Number },
     price: { type: Number },
     status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' },
-    // paymentInfo: {},
+    paymentInfo: {
+        paymentIntentId: { type: String },
+        amount: { type: Number },
+        currency: { type: String },
+        paymentDate: { type: Date },
+        paymentStatus: {
+            type: String,
+            enum: ['pending', 'succeeded', 'failed', 'refunded'],
+        },
+    },
     createdAt: { type: Date, default: Date.now, select: false },
     updatedAt: { type: Date, default: Date.now, select: false },
 });

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { stripe, STRIPE_CONFIG } from '../config/stripe';
 import { CreatePaymentIntentRequest, PaymentIntentResponse, RefundRequest } from '../utils/types';
 import { sendSuccessResponse, sendErrorResponse } from '../utils/responseHelpers';
+import Booking from '../models/bookingModel';
 
 export const createPaymentIntent = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -23,6 +24,15 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
             metadata: { bookingId, eventId, userId, ...metadata },
         });
 
+        const paymentInfo = {
+            paymentIntentId: paymentIntent.id,
+            amount: paymentIntent.amount / 100,
+            currency: paymentIntent.currency,
+            paymentDate: new Date(),
+            paymentStatus: 'pending',
+        }
+        await Booking.findByIdAndUpdate(bookingId, { paymentInfo: paymentInfo });
+
         const response: PaymentIntentResponse = {
             clientSecret: paymentIntent.client_secret!,
             paymentIntentId: paymentIntent.id,
@@ -38,7 +48,10 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
 
 export const processRefund = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { paymentIntentId, amount, reason = 'requested_by_customer' }: RefundRequest = req.body;
+        const { bookingId, reason = 'requested_by_customer' }: RefundRequest = req.body;
+        const booking = await Booking.findById(bookingId);
+        const paymentIntentId = booking?.paymentInfo?.paymentIntentId;
+        const amount = booking?.paymentInfo?.amount;
         if (!paymentIntentId) {
             sendErrorResponse(res, 400, 'Payment intent ID is required');
             return;

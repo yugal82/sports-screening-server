@@ -14,6 +14,7 @@
   "dependencies": {
     "@types/amqplib": "^0.10.7",
     "@types/cookie-parser": "^1.4.9",
+    "@types/stripe": "^8.0.417",
     "amqplib": "^0.10.8",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
@@ -27,7 +28,8 @@
     "mongoose": "^8.15.2",
     "multer": "^1.4.5-lts.1",
     "node-geocoder": "^4.4.1",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "stripe": "^18.3.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

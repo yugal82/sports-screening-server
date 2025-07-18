@@ -309,4 +309,57 @@ const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<
     }
 };
 
-export { getAllBookings, getBooking, createBooking, cancelBooking };
+const updateBooking = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        if (!req.user) {
+            res.status(401).json({
+                status: false,
+                message: 'User not authenticated.'
+            });
+            return;
+        }
+
+        const { id } = req.params;
+        const { status, paymentInfo } = req.body;
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            res.status(404).json({
+                status: false,
+                message: 'Booking not found.'
+            });
+            return;
+        }
+
+        if (booking.userId.toString() !== req.user._id?.toString()) {
+            res.status(403).json({
+                status: false,
+                message: 'You are not authorized to update this booking.'
+            });
+            return;
+        }
+
+        if (status) booking.status = status;
+
+        // if (paymentInfo) {
+        //     booking.paymentInfo = paymentInfo;
+        // }
+
+        await booking.save();
+
+        res.status(200).json({
+            status: true,
+            message: "Booking updated successfully.",
+            booking: booking
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            status: false,
+            message: "Could not update booking. Please try again.",
+            error: process.env.NODE_ENV === 'development' ? error : undefined
+        });
+    }
+}
+
+export { getAllBookings, getBooking, createBooking, cancelBooking, updateBooking };

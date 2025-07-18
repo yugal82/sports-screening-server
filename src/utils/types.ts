@@ -42,4 +42,41 @@ interface IEvent {
     image?: string; // Base64 encoded image
 }
 
+// Stripe Payment Types
+export interface CreatePaymentIntentRequest {
+    amount: number;
+    currency?: string;
+    bookingId: string;
+    eventId: string;
+    userId: string;
+    metadata?: Record<string, string>;
+}
+
+export interface PaymentIntentResponse {
+    clientSecret: string;
+    paymentIntentId: string;
+    amount: number;
+    currency: string;
+}
+
+export interface RefundRequest {
+    paymentIntentId: string;
+    amount?: number;
+    reason?: 'requested_by_customer' | 'duplicate' | 'fraudulent';
+}
+
+export interface WebhookEvent {
+    id: string;
+    type: string;
+    data: {
+        object: any;
+    };
+    created: number;
+}
+
+export interface StripeWebhookData {
+    event: WebhookEvent;
+    signature: string;
+}
+
 export { IUser, IEvent };

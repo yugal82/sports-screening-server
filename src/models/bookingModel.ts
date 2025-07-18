@@ -6,7 +6,8 @@ const bookingSchema = new Schema({
     qrCodeData: { type: String },
     quantity: { type: Number },
     price: { type: Number },
-    // status: { type: String, enum: ['pending', 'confirmed', 'cancelled'] },
+    status: { type: String, enum: ['pending', 'confirmed', 'cancelled'], default: 'pending' },
+    // paymentInfo: {},
     createdAt: { type: Date, default: Date.now, select: false },
     updatedAt: { type: Date, default: Date.now, select: false },
 });

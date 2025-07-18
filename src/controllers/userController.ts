@@ -37,12 +37,15 @@ const findUserById = async (id: string) => {
 const getUpcomingBookings = async (userId: string) => {
     const currentDate = new Date();
 
-    // Get upcoming bookings with populated event details
-    const bookings = await Booking.find({ userId })
+    // Get upcoming confirmed bookings with populated event details
+    const bookings = await Booking.find({
+        userId,
+        status: 'confirmed' // Only confirmed bookings
+    })
         .populate({
             path: 'eventId',
             select: 'sportsCategory venue date time price image',
-            // match: { date: { $gte: currentDate } } // Only future events
+            match: { date: { $gte: currentDate } } // Only future events
         })
         .sort({ createdAt: -1 });
 

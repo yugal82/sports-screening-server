@@ -4,6 +4,7 @@ import Event from "../models/eventModel";
 import User from "../models/userModel";
 import { AuthError } from "../utils/errors";
 import { AuthenticatedRequest } from "./authController";
+import { stripe } from "../config/stripe";
 
 // Types
 interface CreateBookingRequest {
@@ -284,11 +285,32 @@ const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<
             return;
         }
 
+        // Process Stripe refund if payment was made
+        let refundResult = null;
+        if (booking.paymentInfo?.paymentIntentId && booking.paymentInfo?.paymentStatus === 'succeeded') {
+            try {
+                const refund = await stripe.refunds.create({
+                    payment_intent: booking.paymentInfo.paymentIntentId,
+                    reason: 'requested_by_customer'
+                });
+                refundResult = {
+                    refundId: refund.id,
+                    amount: refund.amount / 100,
+                    status: refund.status
+                };
+            } catch (error) {
+                console.error('Stripe refund failed:', error);
+                // Continue with cancellation even if refund fails
+            }
+        }
+
         // Increase available seats for the event
         await updateEventSeats(booking.eventId.toString(), booking.quantity || 0, 'increase');
 
-        // Delete the booking
-        await Booking.findByIdAndDelete(id);
+        // Update booking status instead of deleting
+        booking.status = 'cancelled';
+        if (booking.paymentInfo) booking.paymentInfo.paymentStatus = 'refunded';
+        await booking.save();
 
         res.status(200).json({
             status: true,
@@ -296,7 +318,10 @@ const cancelBooking = async (req: AuthenticatedRequest, res: Response): Promise<
             cancelledBooking: {
                 id: booking._id,
                 quantity: booking.quantity,
-                eventId: booking.eventId
+                eventId: booking.eventId,
+                status: booking.status,
+                paymentStatus: booking.paymentInfo?.paymentStatus,
+                refund: refundResult
             }
         });
 

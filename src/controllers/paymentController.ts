@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { stripe, STRIPE_CONFIG } from '../config/stripe';
-import { CreatePaymentIntentRequest, PaymentIntentResponse, RefundRequest } from '../utils/types';
+import { CreatePaymentIntentRequest, PaymentIntentResponse } from '../utils/types';
 import { sendSuccessResponse, sendErrorResponse } from '../utils/responseHelpers';
 import Booking from '../models/bookingModel';
 
@@ -46,31 +46,3 @@ export const createPaymentIntent = async (req: Request, res: Response): Promise<
     }
 };
 
-export const processRefund = async (req: Request, res: Response): Promise<void> => {
-    try {
-        const { bookingId, reason = 'requested_by_customer' }: RefundRequest = req.body;
-        const booking = await Booking.findById(bookingId);
-        const paymentIntentId = booking?.paymentInfo?.paymentIntentId;
-        const amount = booking?.paymentInfo?.amount;
-        if (!paymentIntentId) {
-            sendErrorResponse(res, 400, 'Payment intent ID is required');
-            return;
-        }
-        const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-        if (paymentIntent.status !== 'succeeded') {
-            sendErrorResponse(res, 400, 'Payment intent must be succeeded to process refund');
-            return;
-        }
-        const refundParams: any = { payment_intent: paymentIntentId, reason };
-        if (amount) refundParams.amount = Math.round(amount * 100);
-        const refund = await stripe.refunds.create(refundParams);
-        sendSuccessResponse(res, 200, 'Refund processed successfully', {
-            refundId: refund.id,
-            amount: refund.amount / 100,
-            status: refund.status,
-            reason: refund.reason,
-        });
-    } catch (error) {
-        sendErrorResponse(res, 500, 'Failed to process refund');
-    }
-}; 
